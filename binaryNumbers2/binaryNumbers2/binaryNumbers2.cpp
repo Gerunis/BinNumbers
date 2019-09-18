@@ -9,9 +9,9 @@
 
 using namespace std;
 
-bitset<32> & Sum(bitset<32> & a, bitset<32> & b) {
+bitset<32>& Sum(bitset<32> & a, bitset<32> & b) {
 	bitset<32> res;
-	int c = 0,n,p;
+	int c = 0, n, p;
 	for (int i = 0; i < 32; i++) {
 		p = a[i] + b[i] + c;
 		n = (p) % 2;
@@ -26,7 +26,7 @@ bitset<32>& ToTwo(int a)
 	cout << bitset<32>(a) << endl;
 	bitset<32> res;
 	int k;
-	bool flag = false ,minus = a < 0;
+	bool flag = false, minus = a < 0;
 	if (minus) res = ~res;
 	int b = abs(a);
 
@@ -43,7 +43,7 @@ bitset<32>& ToTwo(int a)
 		res[i] = k;
 		b = b / 2;
 	}
-	
+
 	return res;
 }
 
@@ -98,33 +98,102 @@ bitset<32> toFloat(float a) {
 	if (e == 128) return res;
 	e += 127;
 	for (int i = 0; i < 8; i++) {
-		res[i + 23] =  e%2;
+		res[i + 23] = e % 2;
 		e /= 2;
 	}
-	
+
 	return res;
 }
 
-bitset<32> & SumFloat(bitset<32> & a, bitset<32> & b) {
+int TakeSub(bitset<32> & biger, bitset<32> lower) {
+	int sub = 0, k = 0, n = 1;
+	for (int i = 23; i < 31; i++) {
+		if (biger[i] == 1) {
+			if (lower[i] == k)
+				sub += n;
+			else k = 0;
+		}
+		else {
+			if (lower[i] != k) {
+				sub += n;
+				k = 1;
+			}
+		}
+		n *= 2;
+	}
+	cout << sub << endl;
+	return sub;
+}
+
+bitset<32> & SumMantisses(bitset<32> &big, bitset<32> &small, int sub) {
+	int n = 0, p, i;
 	bitset<32> res;
-	int c = 0, n, p;
-	for (int i = 0; i < 32; i++) {
-		p = a[i] + b[i] + c;
-		n = (p) % 2;
-		res[i] = n;
-		c = (p) / 2;
+	for (i = 0; i <= 23 - sub; i++) {
+
+		p = (i == 23 ? 1 : big[i]) + ((i+sub) == 23 ? 1 : small[i + sub]) + n;
+		res[i] = p % 2;
+		n = p / 2;
+	}
+	for (; i < 23; i++) {
+		p = big[i] + n;
+		res[i] = p % 2;
+		n = p / 2;
+	}
+	if (n == 1) {
+		for (i = 1; i < 24; i++) {
+			res[i - 1] = res[i];
+		}
+	}
+
+	for (int i = 23; i < 31; i++) {
+		p = big[i] + n;
+		res[i] = p % 2;
+		n = p / 2;
 	}
 	return res;
 }
 
-int main()
-	{	
-	float a = -0.000000000000003;
-	int* rf = reinterpret_cast<int*>(&a);
-	cout << bitset<32>(*rf) << endl;
-	bitset<32> t = toFloat(a);
-	cout << t << endl;	
+bitset<32>& SumFloat(bitset<32> & a, bitset<32> & b) {
+	int sub = 0, n = 0, p;
+	for (int i = 30; i >= 23; i--) {
+		if (a[i] > b[i]) {
+			sub = TakeSub(a, b);
+			return SumMantisses(a, b, sub);
+		}
+		if (a[i] < b[i]) {
+			sub = TakeSub(b, a);
+			return SumMantisses(b, a, sub);
+		}
+	}
+	return SumMantisses(a, b, 0);
+}
 
+
+
+
+int main()
+{
+	float a = 176.0918;
+	float b = 0.48914984984189;
+
+	//float a = 372.1;
+	//float b = 25.567;
+	int* rf = reinterpret_cast<int*>(&a);
+	cout << bitset<32>(*rf) <<" "<< a << endl;
+	rf = reinterpret_cast<int*>(&b);
+	cout << bitset<32>(*rf) << " " << b << endl;
+
+	cout << endl;
+
+	bitset<32> bsa = toFloat(a);
+	bitset<32> bsb = toFloat(b);
+	bitset<32> bsc = SumFloat(bsa, bsb);
+
+	float c = a + b;
+	
+	rf = reinterpret_cast<int*>(&c);
+	cout << bitset<32>(*rf) << endl;
+	cout << bsc << endl;
 	return 0;
 }
 
